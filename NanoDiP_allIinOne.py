@@ -4,7 +4,7 @@
 # In[ ]:
 
 
-versionString="20"                                   # version string of this application
+versionString="22"                                   # version string of this application
 
 
 # ## NanoDiP all-in-one Jupyter Notebook
@@ -22,17 +22,15 @@ versionString="20"                                   # version string of this ap
 # * **CAUTION**: Requires a *patched* version of minknow api, file `[VENV]/lib/python3.7/site-packages/minknow_api/tools/protocols.py`. Without the patch, the generated fast5 sequencing data will be unreadable with f5c or nanopolish (wrong compression algorithm, which is the default in the MinKNOW backend).
 # 
 
-# In[ ]:
+# In[1]:
 
 
-#get_ipython().system('python --version # verify running Python version')
-
-
-# In[ ]:
-
-
-#from IPython.core.display import display, HTML      # set display witdth to 100%
-#display(HTML("<style>.container { width:100% !important; }</style>"))
+# verify running Python version (should be 3.7.5) and adjust jupyter notebook
+import IPython
+import os
+from IPython.core.display import display, HTML      # set display witdth to 100%
+display(HTML("<style>.container { width:100% !important; }</style>"))
+os.system('python --version')
 
 
 # ## Multithreading Options
@@ -71,6 +69,7 @@ from minknow_api.tools import protocols
 from numba import jit
 import numpy
 import openpyxl
+import os
 from os import listdir
 import pandas
 import plotly.express as px
@@ -136,6 +135,14 @@ barcodeNames=["barcode01","barcode02","barcode03",  # barcode strings, currently
               "barcode04","barcode05","barcode06",
               "barcode07","barcode08","barcode09",
               "barcode10","barcode11","barcode12"]
+refgenomefa="/applications/reference_data/minimap_data/hg19.fa" # human reference genome
+refgenomemmi="/applications/reference_data/minimap_data/hg19_20201203.mmi" # human reference genome minimap2 mmi
+ilmncgmapfile="/applications/reference_data/minimap_data/hg19_HumanMethylation450_15017482_v1-2_cgmap.tsv" # Illumina probe names of the 450K array
+f5cBin="/applications/f5c/f5c"                      # f5c binary location (absolute path) v6
+minimap2Bin="/applications/nanopolish/minimap2/minimap2" # minimap2 binary location (absolute path)
+samtoolsBin="/applications/samtools/samtools"       # samtools binary location (absolute path)
+rscriptBin="/applications/R-4.0.3/bin/Rscript"      # Rscript binary location (absolute path)
+readCpGscript="/applications/nanodip/readCpGs_mod02.R" # R script that reads CpGs into simplified text file (absolute path)
 verbosity=0                                         # 0=low log verbosity, 1=high log verbosity (with timestamps, for benchmarking and debugging)
 
 
@@ -297,16 +304,86 @@ def getOverlapCpGs(sampleName):
     return len(methoverlap)
 
 
+# def calculateMethylationAndBamFromFast5Fastq(sampleName): # launch a shell script
+#     cmd = [cpgScriptPath,sampleName,minknowDataDir]
+#     p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+#     outputstring=""
+#     for l in p.stdout:
+#         outputstring=outputstring+str(l)+"\n"
+#     return outputstring
+
 # In[ ]:
 
 
-def calculateMethylationAndBamFromFast5Fastq(sampleName): # launch a shell script
-    cmd = [cpgScriptPath,sampleName,minknowDataDir]
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-    outputstring=""
-    for l in p.stdout:
-        outputstring=outputstring+str(l)+"\n"
-    return outputstring
+def f5cOneFast5(sampleId,analyzeOne=True):
+    analyzedCount=0
+    thisRunDir=minknowDataDir+"/"+sampleId
+    pattern = '*.fast5'
+    fileList = []
+    for dName, sdName, fList in os.walk(thisRunDir): # Walk through directory
+        for fileName in fList:
+            if fnmatch.fnmatch(fileName, pattern): # Match search string
+                fileList.append(os.path.join(dName, fileName))
+    calledList=[]
+    completedCount=0
+    maxBcCount=1 # at least 2 "passed" files (>1) need to be present
+    targetBc="undetermined"
+    for bc in barcodeNames:
+        thisBc=0
+        for f in fileList:
+            if bc in f:
+                if "_pass_" in f:
+                    thisBc+=1
+        if thisBc > maxBcCount:
+            maxBcCount=thisBc
+            targetBc=bc
+    f5cAnalysisDir=nanodipOutputDir+"/"+sampleId
+    if os.path.exists(f5cAnalysisDir)==False:
+        os.mkdir(f5cAnalysisDir)
+    thisBcFast5=[]
+    thisBcFastq=[]
+    for f in fileList:
+        if targetBc in f:
+            q=f.replace(".fast5","").replace("fast5_pass","fastq_pass")+".fastq"
+            if os.path.exists(q): # check if accompanying fastq exists
+                thisBcFast5.append(f)
+                thisBcFastq.append(q)
+                thisBcFileName=f.split("/")
+                thisBcFileName=thisBcFileName[len(thisBcFileName)-1].replace(".fast5","") # get name prefix (to be the analysis subdir name later)
+                thisAnalysisDir=f5cAnalysisDir+"/"+thisBcFileName
+                if os.path.exists(thisAnalysisDir)==False:
+                    os.mkdir(thisAnalysisDir)
+                target5=thisAnalysisDir+"/"+thisBcFileName+".fast5"
+                targetq=thisAnalysisDir+"/"+thisBcFileName+".fastq"
+                if os.path.exists(target5)==False:
+                    os.symlink(f,target5)             # fast5 symlink
+                if os.path.exists(targetq)==False:
+                    os.symlink(q,targetq)             #fastq symlink
+                if os.path.exists(thisAnalysisDir+"/"+thisBcFileName+"-methoverlapcount.txt")==False:
+                    if (analyzeOne==True and analyzedCount==0) or analyzeOne==False:
+                        cmd=f5cBin+" index -t 1 --iop 100 -d "+thisAnalysisDir+" "+targetq
+                        p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE) #index, call methylation and get methylation frequencies
+                        p.wait()
+                        cmd=minimap2Bin+" -a -x map-ont "+refgenomemmi+" "+targetq+" -t 4 | "+samtoolsBin+" sort -T tmp -o "+thisAnalysisDir+"/"+thisBcFileName+"-reads_sorted.bam"
+                        p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE) # get sorted BAM (4 threads)
+                        p.wait()
+                        cmd=samtoolsBin+" index "+thisAnalysisDir+"/"+thisBcFileName+"-reads_sorted.bam"
+                        p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE) # index BAM
+                        p.wait()
+                        cmd=f5cBin+" call-methylation -B2000000 -K400 -b "+thisAnalysisDir+"/"+thisBcFileName+"-reads_sorted.bam -g "+refgenomefa+" -r "+targetq+" > "+thisAnalysisDir+"/"+thisBcFileName+"-result.tsv"
+                        p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE) # set B to 2 megabases (GPU) and 0.4 kreads
+                        p.wait()
+                        cmd=f5cBin+" meth-freq -c 2.5 -s -i "+thisAnalysisDir+"/"+thisBcFileName+"-result.tsv > "+thisAnalysisDir+"/"+thisBcFileName+"-freq.tsv"
+                        p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
+                        p.wait()
+                        cmd=rscriptBin+" "+readCpGscript+" "+thisAnalysisDir+"/"+thisBcFileName+"-freq.tsv "+ilmncgmapfile+" "+thisAnalysisDir+"/"+thisBcFileName+"-methoverlap.tsv "+thisAnalysisDir+"/"+thisBcFileName+"-methoverlapcount.txt"
+                        p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
+                        p.wait()
+                        calledList.append(thisBcFileName)
+                        analyzedCount+=1
+                else:
+                    completedCount+=1
+    return "Target = "+targetBc+"<br>Methylation called for "+str(calledList)+". "+str(completedCount+analyzedCount)+"/"+str(len(thisBcFast5))  
 
 
 # ### 2. MinKNOW API Functions
@@ -1499,7 +1576,8 @@ def methcallLivePage(sampleName): # generate a self-refreshing page to invoke me
     ht="<html><head><title>MethCaller: "+sampleName+"</title>"
     ht=ht+"<meta http-equiv='refresh' content='3'></head><body>"
     ht=ht+"last refresh and console output at "+datetimestringnow()+"<hr>shell output<br><br><tt>"
-    ht=ht+calculateMethylationAndBamFromFast5Fastq(sampleName)
+    #ht=ht+calculateMethylationAndBamFromFast5Fastq(sampleName)
+    ht=ht+f5cOneFast5(sampleName,analyzeOne=True)
     ht=ht+"</tt></body></html>"
     return ht
 
@@ -1871,9 +1949,3 @@ if __name__ == '__main__':
 # To preseve these messages, halt the Python kernel, save and close the notebook to send it for support. This makes sure that the code as well as the error messages will be preserved.
 # 
 # To launch the user interface, wait until you see a pink log entry that the web server has started, then navigate to http://localhost:8080.
-
-# In[ ]:
-
-
-
-
