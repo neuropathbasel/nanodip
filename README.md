@@ -1,4 +1,4 @@
-# nanodip
+# NanoDiP
 Nanopore Diginital Pathology - NanoDiP, the Nanopore companion of EpiDiP (http://www.epidip.org)
 
 
