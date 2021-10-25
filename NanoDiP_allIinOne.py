@@ -4,7 +4,7 @@
 # In[ ]:
 
 
-versionString="22"                                   # version string of this application
+versionString="23"                                   # version string of this application
 
 
 # ## NanoDiP all-in-one Jupyter Notebook
@@ -22,7 +22,7 @@ versionString="22"                                   # version string of this ap
 # * **CAUTION**: Requires a *patched* version of minknow api, file `[VENV]/lib/python3.7/site-packages/minknow_api/tools/protocols.py`. Without the patch, the generated fast5 sequencing data will be unreadable with f5c or nanopolish (wrong compression algorithm, which is the default in the MinKNOW backend).
 # 
 
-# In[1]:
+# In[ ]:
 
 
 # verify running Python version (should be 3.7.5) and adjust jupyter notebook
@@ -1046,6 +1046,33 @@ def getThisRunOutput(deviceString,sampleName,runId): # get run yield by device, 
 # In[ ]:
 
 
+def getThisRunEstimatedOutput(deviceString,sampleName,runId): # get run yield by device, sampleName, runId
+    thisRunOutput=[-1,-1] # defaults in case of error / missing information
+    manager=mkManager()            # in the buffer until acquisition (not just a start) of a new run
+    positions = list(manager.flow_cell_positions()) # have been initiated.
+    filtered_positions = list(filter(lambda pos: pos.name == deviceString, positions))
+    connection = filtered_positions[0].connect() # Connect to the grpc port for the position
+    readCount=-3
+    calledBases=-3
+    if getThisRunSampleID(deviceString)==sampleName: # check that runID and sampleID match
+        readCount=-4
+        calledBases=-4
+        if connection.acquisition.get_current_acquisition_run().run_id==runId:
+            if connection.acquisition.current_status()!="status: READY": # i.e., working
+                try:
+                    acq=connection.acquisition.get_acquisition_info()
+                    readCount=acq.yield_summary.basecalled_pass_read_count
+                    calledBases=acq.yield_summary.estimated_selected_bases
+                except:
+                    readCount=-5
+                    calledBases=-5
+    thisRunOutput=[readCount,calledBases]
+    return thisRunOutput # shall be a list
+
+
+# In[ ]:
+
+
 def getThisRunInformation(deviceString): # get current run information. Only available after data acquisition
     manager=mkManager()                  # has started.
     positions = list(manager.flow_cell_positions())
@@ -1063,7 +1090,7 @@ def getThisRunInformation(deviceString): # get current run information. Only ava
 
 def thisRunWatcherTerminator(deviceString,sampleName):
     realRunId=getActiveRun(deviceString) #
-    currentBases=getThisRunOutput(deviceString,sampleName,realRunId)[1]
+    currentBases=getThisRunEstimatedOutput(deviceString,sampleName,realRunId)[1]
     currentBasesString=str(round(currentBases/1e6,2))
     wantedBasesString=str(round(wantedBases/1e6,2))
     myString="<html><head>"
