@@ -3,7 +3,7 @@
 # J. Hench, IfP Basel, 2021
 # jupyter notebook and minknow_api won't work togehter in python 3.8.8
 # Ubuntu 18.04 jetpack requirements:
-# sudo apt install python3.7 python3.7-dev python3.7-venv python3-pip
+sudo apt install python3.7 python3.7-dev python3.7-venv python3-pip
 
 
 venvname=nanodipVenv01
