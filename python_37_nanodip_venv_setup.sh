@@ -53,5 +53,5 @@ cd minknow_api
 python setup.py install
 
 # launch the jupyter notebook
-cd /applications/nanodip
-python -m notebook
+# cd /applications/nanodip
+# python -m notebook
