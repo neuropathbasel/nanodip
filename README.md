@@ -8,14 +8,17 @@ NanoDiP operates Nanopore (ONT) MinION sequencers through the MinKNOW API and pe
 ![NanoDiP_v20_20211014](https://user-images.githubusercontent.com/59837805/137954721-ff179777-ac40-4e14-898f-c23ffea3d8a5.gif)
 
 # Disclaimer
-Implementation of this software in a diagnostic settings occurs in the sole responsibility of the treating physician.
+Implementation of this software in a diagnostic settings occurs in the sole responsibility of the treating physician. Usage of this software occurs at the risk of the user. The authors may not be held liable for any damage (including hardware) this software might cause.
 
 # Installation
-NanoDiP requires a distinct setup of software / hardware. Instructions on how to install NanoDiP are currently being prepared. Installation scripts that (should) compile all required dependencies are available at https://github.com/neuropathbasel/nanodip_dependencies.
+NanoDiP requires a distinct setup of software / hardware. Instructions on how to install NanoDiP are currently being prepared. Installation scripts that (should) compile all required dependencies are available at https://github.com/neuropathbasel/nanodip_dependencies. 
 
 The intended location for the installation is:
 
 `/applications/nanodip` for this repository
 `/applications/nanodip_dependencies` for the installation routines, which place compiled packages in `/applications/`.
 
-The default and preferably *only* user name for the setup is `minit` on an ARMv8 platform and `minknow` on an x86_64 computer. Data acquisition and post-hoc data analysis should be possible without GPUs, too. While MinION sequencers seem to work with USB2, they are intended to communicate with through USB3. USB-C>>USB3 adaptors work well. SSD drives (e.g., 1TB) are strongly recommended for the OS and immediate data storage locations. Such modules (e.g., M2 keys) can be connected to the AGX through PCIe adapters; do not the use SATA or USB3 interfaces. We use conventional (large) USB hard drives for post-hoc local data archives.
+The default and preferably *only* user name for the setup is `minit` on an ARMv8 platform and `minknow` on an x86_64 computer. Data acquisition and post-hoc data analysis should be possible without GPUs, too. While MinION sequencers seem to work with USB2, they are intended to communicate through USB3. USB-C>>USB3 adaptors work well. SSD drives (e.g., 1TB) are strongly recommended for the OS and immediate data storage locations. Such modules (e.g., M2 keys) can be connected to the AGX through PCIe adapters; do not use eSATA or USB3 interfaces (on the AGX). We use conventional (large) USB3 hard drives for post-hoc local data archives.
+
+# Usage
+At present, there is no user manual. The code can either be executed as jupyter notebook, or as python script. The python script in this repository was gerated from the jupyter notebook version by downloading it "as .py". In order to understand how things work under the hood, please examine the jupyter notebook (also while executing the code). The script launches a CherryPy web server listetning on port 8080 of "localhost". There is no login prevention, and we advise to only access the web-based UI locally with chromium-browser. Firefox works except for WebGL rendering on some hardware, which negatively impacts on interactive plotly plots. In order to run, a python virtual environment is suggested. This venv can be generated with the respective script in this repository.
