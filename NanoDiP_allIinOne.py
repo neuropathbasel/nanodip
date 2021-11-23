@@ -4,7 +4,7 @@
 # In[ ]:
 
 
-versionString="24"                                   # version string of this application
+versionString="25"                                   # version string of this application
 
 
 # ## NanoDiP all-in-one Jupyter Notebook
@@ -137,8 +137,8 @@ barcodeNames=["barcode01","barcode02","barcode03",  # barcode strings, currently
               "barcode07","barcode08","barcode09",
               "barcode10","barcode11","barcode12"]
 refgenomefa="/applications/reference_data/minimap_data/hg19.fa" # human reference genome
-refgenomemmi="/applications/reference_data/minimap_data/hg19_20201203.mmi" # human reference genome minimap2 mmi
-ilmncgmapfile="/applications/reference_data/minimap_data/hg19_HumanMethylation450_15017482_v1-2_cgmap.tsv" # Illumina probe names of the 450K array
+refgenomemmi="/applications/reference_data/minimap_data/hg19_nanodip.mmi" # human reference genome minimap2 mmi
+ilmncgmapfile="/applications/reference_data/microarray/hg19_HumanMethylation450_15017482_v1-2_cgmap.tsv" # Illumina probe names of the 450K array
 f5cBin="/applications/f5c/f5c"                      # f5c binary location (absolute path) v6
 minimap2Bin="/applications/nanopolish/minimap2/minimap2" # minimap2 binary location (absolute path)
 samtoolsBin="/applications/samtools/samtools"       # samtools binary location (absolute path)
@@ -873,6 +873,23 @@ def startRun():
 
                         #print("Started protocol %s" % run_id)
     return errormessage+run_id # one of them should be ""
+
+
+# In[ ]:
+
+
+def setBiasVoltage(minionId, newVoltage): # stop an existing run (if any) for a MinION device
+    manager=mkManager()
+    positions = list(manager.flow_cell_positions())
+    filtered_positions = list(filter(lambda pos: pos.name == minionId, positions))
+    # Connect to the grpc port for the position:
+    connection = filtered_positions[0].connect()
+    v=connection.device.get_bias_voltage().bias_voltage
+    thisMessage="Current bias voltage: "+str(v)+" mV. Changing to "+str(newVoltage)+" mV."
+    connection.device.set_bias_voltage(bias_voltage=float(newVoltage))
+    v=connection.device.get_bias_voltage().bias_voltage
+    thisMessage="Voltage after change: "+str(v)+" mV."
+    return thisMessage
 
 
 # In[ ]:
@@ -1706,7 +1723,7 @@ class MinKnowIfPApi(object): # the CherryPy Web UI class that defines entrypoint
         return myString
 
     @cherrypy.expose
-    def startSequencing(self,deviceId="",sampleId="",runDuration="",referenceFile=""):
+    def startSequencing(self,deviceId="",sampleId="",runDuration="",referenceFile="",startBiasVoltage=""):
         myString=menuheader(2,0)
         if sampleId:
             if float(runDuration)>=0.1:
@@ -1724,14 +1741,16 @@ class MinKnowIfPApi(object): # the CherryPy Web UI class that defines entrypoint
                             '--verbose',
                             '--kit','SQK-RBK004',
                             '--barcoding',
-                            '--barcode-kits','SQK-RBK004']
+                            '--barcode-kits','SQK-RBK004',
+                            '--','--start_bias_voltage',startBiasVoltage] # The "--" are required for so-called extra-arguments.
                 realRunId=startRun()
                 writeReferenceDefinition(sampleId,referenceFile)
                 myString=myString+"sequencing run started for "+sampleId+" on "+deviceId+" as "+realRunId+" with reference "+referenceFile
                 myString=myString+"<hr>"+getThisRunInformation(deviceId)
-                myString=myString+"<hr><a href='launchAutoTerminator?sampleName="+sampleId+"&deviceString="+deviceId+"'>"
-                myString=myString+"Click this link to launch automatic run terminator after "+str(round(wantedBases/1e6))+" MB.</a> "
-                myString=myString+"If you do not start the run terminator, you will have to terminate the run manually, or it will stop after the predefined time."
+                myString=myString+'''<hr>Navigate to <b>MK1b Status</b> to launch the run terminator. It may take several minutes until the link for the
+                run terminator appears. This is due to the inexistent run state while the flow cell is being heated up to operation temperature.
+                In addition, you may want to navigate to <b>Analyze</b> and launch <b>get CpGs</b>.<br><br>
+                If you do not start the run terminator, you will have to terminate the run manually, or it will stop after the predefined time.'''
         else:    
             myString=myString+'''<form action="startSequencing" method="GET">
                 Select an idle Mk1b:&nbsp;<select name="deviceId" id="deviceId">'''
@@ -1743,6 +1762,10 @@ class MinKnowIfPApi(object): # the CherryPy Web UI class that defines entrypoint
                         myString=myString+'<option value="'+thisPos+'">'+thisPos+': '+getFlowCellID(thisPos)+'</option>'
             myString=myString+'''
                 </select>&nbsp; and enter the sample ID:&nbsp;<input type="text" name="sampleId" />
+                &nbsp;with start voltage&nbsp;<select name="startBiasVoltage" id="startBiasVoltage">'''
+            for vo in range(-180,-260,-5):
+                myString=myString+'<option value="'+str(vo)+'">'+str(vo)+' mV</option>'
+            myString=myString+'''</select>
                 &nbsp;for&nbsp;<input type="text" name="runDuration" value="72" />&nbsp;hours.
                 &nbsp;Reference set&nbsp;<select name="referenceFile" id="referenceFile">'''
             for ref in getReferenceAnnotations():
@@ -1769,7 +1792,8 @@ class MinKnowIfPApi(object): # the CherryPy Web UI class that defines entrypoint
                         '--verbose',
                         '--kit','SQK-RBK004',
                         '--barcoding',
-                        '--barcode-kits','SQK-RBK004']
+                        '--barcode-kits','SQK-RBK004',
+                        '--','--start_bias_voltage','180'] # The "--" are required for so-called extra-arguments. For test runs, the default -180 mV are ok.
             realRunId=startRun()
             myString=myString+"sequencing run started for "+sampleId+" on "+deviceId+" as "+realRunId
             myString=myString+"<hr>"+getThisRunInformation(deviceId)
@@ -1790,6 +1814,13 @@ class MinKnowIfPApi(object): # the CherryPy Web UI class that defines entrypoint
     def stopSequencing(self,deviceId=""):      
         myString=menuheader(1,0)
         myString=myString + stopRun(deviceId)
+        myString=myString + "<br><br>Click on any menu item to proceed."
+        return myString
+    
+    @cherrypy.expose
+    def changeVoltageLive(self,deviceId="",newVoltage=""):      
+        myString=menuheader(1,0)
+        myString=myString + setBiasVoltage(deviceId,newVoltage)
         myString=myString + "<br><br>Click on any menu item to proceed."
         return myString
     
