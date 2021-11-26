@@ -4,7 +4,7 @@
 # In[ ]:
 
 
-versionString="25"                                   # version string of this application
+versionString="26"                                   # version string of this application
 
 
 # ## NanoDiP all-in-one Jupyter Notebook
@@ -1793,7 +1793,7 @@ class MinKnowIfPApi(object): # the CherryPy Web UI class that defines entrypoint
                         '--kit','SQK-RBK004',
                         '--barcoding',
                         '--barcode-kits','SQK-RBK004',
-                        '--','--start_bias_voltage','180'] # The "--" are required for so-called extra-arguments. For test runs, the default -180 mV are ok.
+                        '--','--start_bias_voltage','-180'] # The "--" are required for so-called extra-arguments. For test runs, the default -180 mV are ok.
             realRunId=startRun()
             myString=myString+"sequencing run started for "+sampleId+" on "+deviceId+" as "+realRunId
             myString=myString+"<hr>"+getThisRunInformation(deviceId)
