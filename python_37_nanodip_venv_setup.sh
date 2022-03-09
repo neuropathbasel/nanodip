@@ -40,10 +40,11 @@ pip install pandas
 pip install plotly
 pip install psutil
 pip install pysam
+pip install reportlab==3.6.1 # 20220308 discovered bug in current reportlab version, hence the version pinning
 pip install seaborn
 pip install tqdm
 pip install umap-learn
-pip install xhtml2pdf
+pip install xhtml2pdf==0.2.5 # 20220308 discovered bug in current reportlab version, hence the version pinning
 
 # install a patched version of the minkow API:
 # AND NOT! pip install minknow_api #install from github https://github.com/neuropathbasel/minknow_api
