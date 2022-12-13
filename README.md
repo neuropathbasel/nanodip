@@ -8,7 +8,7 @@ NanoDiP operates Nanopore (ONT) MinION sequencers through the MinKNOW API and pe
 ![NanoDiP_v20_20211014](https://user-images.githubusercontent.com/59837805/137954721-ff179777-ac40-4e14-898f-c23ffea3d8a5.gif)
 
 # Disclaimer
-Implementation of this software in a diagnostic settings occurs in the sole responsibility of the treating physician. Usage of this software occurs at the risk of the user. The authors may not be held liable for any damage (including hardware) this software might cause.
+Implementation of this software in a diagnostic settings occurs in the sole responsibility of the treating physician. Usage of this software occurs at the risk of the user. The authors may not be held liable for any damage (including hardware) this software might cause. **Use is explicitly restricted to academic and non-for-profit organizations.**
 
 # Installation
 NanoDiP requires a distinct setup of software / hardware. Instructions on how to install NanoDiP are currently being prepared. Installation scripts that (should) compile all required dependencies are available at https://github.com/neuropathbasel/nanodip_dependencies. 
