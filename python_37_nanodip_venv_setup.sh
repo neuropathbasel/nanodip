@@ -29,6 +29,7 @@ pip install jupyter_nbextensions_configurator
 jupyter nbextensions_configurator enable --user
 
 # remaining components in alphabetical order
+pip install cupy
 pip install cherrypy
 pip install grpcio # required for MinKNOW API, replaces old "pip install grpc" which does not work any longer (2021-10-11)
 pip install -U kaleido
@@ -42,6 +43,8 @@ pip install psutil
 pip install pysam
 pip install reportlab==3.6.1 # 20220308 discovered bug in current reportlab version, hence the version pinning
 pip install seaborn
+pip install scikit-learn
+pip install neuralnetwork
 pip install tqdm
 pip install umap-learn
 pip install xhtml2pdf==0.2.5 # 20220308 discovered bug in current reportlab version, hence the version pinning
