@@ -1,6 +1,8 @@
 # NanoDiP
 Nanopore Digital Pathology - NanoDiP, the Nanopore companion of EpiDiP (http://www.epidip.org)
 
+The current development repository of NanoDiP, including R10 support, is at (https://github.com/neuropathbasel/nanodip_dev).
+
 NanoDiP operates Nanopore (ONT) MinION sequencers through the MinKNOW API and performs UMAP-based dimension reduction of the obtained methylation patterns against large numbers of reference datasets derived from the Illumina Infinium 450K/EPIC platform. It also generates copy number plots from aligned reads. Analysis is performed in a live manner during the sequencing. It runs on Ubuntu 18.04 Linux computers with 32GB RAM, 8 cores CPU, and a CUDA GPU with >500 cores.
 
 ![Methylation_CNVP_STB_tumours_2021_HENCH_02](https://user-images.githubusercontent.com/59837805/212966843-38d184d7-fe5e-4495-bd46-e02d57225020.png)
